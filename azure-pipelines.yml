@@ -2,9 +2,9 @@ trigger:
 - main
 
 resources:
-- repo: self
+- repo: self #The self keyword refers to the current repository. It allows the pipeline to access its own repository.
 
-variables:
+variables: #Variables store reusable values. imageRepo is set to sampleapp, which represents the repository name in your Azure Container Registry (ACR).
   imageRepo: sampleapp
   tag: '$(Build.BuildId)'
 
@@ -26,7 +26,7 @@ stages:
         Dockerfile: '$(Build.SourcesDirectory)/app/Dockerfile'
         tags: |
           $(tag)
-    - task: PublishPipelineArtifact@1
+    - task: PublishPipelineArtifact@1 #After the image is built, Kubernetes manifests (such as deployment and service definitions) are published as pipeline artifacts, making them available for the deployment stage.
       inputs:
         targetPath: '$(Pipeline.Workspace)/s/kubernetes'
         artifact: 'manifests'
@@ -36,10 +36,10 @@ stages:
   displayName: Deploy to Dev
   dependsOn: Build
   variables:
-    acrsecret: k8sexamplesacrauth
-    acrdevurl: 'k8sexamplesacr.azurecr.io'
-    replicaNo: 3
-  jobs:
+    acrsecret: k8sexamplesacrauth #A secret containing credentials for the ACR.
+    acrdevurl: 'k8sexamplesacr.azurecr.io' #The URL of the ACR (Azure Container Registry).
+    replicaNo: 3 #The number of replicas (3 in this case).
+  jobs: 
   - deployment: Deploy
     displayName: Deploy to AKS
     environment: 'k8sdev.default'
@@ -49,7 +49,7 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: DownloadPipelineArtifact@2
+          - task: DownloadPipelineArtifact@2 #The deployment job pulls the Kubernetes manifest artifacts created in the build stage.
             inputs:
               buildType: 'current'
               artifactName: 'manifests'
@@ -59,22 +59,22 @@ stages:
               action: 'createSecret'
               namespace: 'default'
               secretType: 'dockerRegistry'
-              secretName: '$(acrsecret)'
+              secretName: '$(acrsecret)'  
               dockerRegistryEndpoint: 'K8SExamplesACR'
-          - task: replacetokens@3
-            displayName: Replace Tokens
-            inputs:
-              rootDirectory: '$(Pipeline.Workspace)/manifests/'
-              targetFiles: 'deployment.yml'
-              encoding: 'auto'
-              writeBOM: true
-              actionOnMissing: 'warn'
-              keepToken: false
-              tokenPrefix: '#'
-              tokenSuffix: '#'
-              useLegacyPattern: false
-              enableTransforms: false
-              enableTelemetry: true
+          # - task: replacetokens@3
+          #   displayName: Replace Tokens
+          #   inputs:
+          #     rootDirectory: '$(Pipeline.Workspace)/manifests/'
+          #     targetFiles: 'deployment.yml'
+          #     encoding: 'auto'
+          #     writeBOM: true
+          #     actionOnMissing: 'warn'
+          #     keepToken: false
+          #     tokenPrefix: '#'
+          #     tokenSuffix: '#'
+          #     useLegacyPattern: false
+          #     enableTransforms: false
+          #     enableTelemetry: true
           - task: KubernetesManifest@0
             inputs:
               action: 'deploy'
